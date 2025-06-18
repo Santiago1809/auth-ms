@@ -328,3 +328,191 @@ export const welcomeUserTemplate = (name: string) => `
 </body>
 </html>
 `
+
+export const verificationCodeTemplate = (
+  name: string,
+  code: string,
+  type: 'email' | 'phone'
+) => `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Código de Verificación - Botopia</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      margin: 0;
+      padding: 20px;
+      min-height: 100vh;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+    .header {
+      background: linear-gradient(135deg, #411E8A 0%, #362075 100%);
+      color: white;
+      padding: 30px;
+      text-align: center;
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 28px;
+      font-weight: 600;
+    }
+    .content {
+      padding: 40px 30px;
+      text-align: center;
+    }
+    .greeting {
+      font-size: 18px;
+      color: #333;
+      margin-bottom: 20px;
+    }
+    .code-container {
+      background: #f8f9ff;
+      border: 2px dashed #411E8A;
+      border-radius: 12px;
+      padding: 30px;
+      margin: 30px 0;
+    }
+    .code {
+      font-size: 36px;
+      font-weight: bold;
+      color: #411E8A;
+      letter-spacing: 8px;
+      font-family: 'Courier New', monospace;
+    }
+    .code-label {
+      color: #666;
+      font-size: 14px;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 1px;
+    }
+    .instructions {
+      color: #555;
+      line-height: 1.6;
+      margin: 20px 0;
+    }
+    .warning {
+      background: #fff3cd;
+      border: 1px solid #ffeaa7;
+      border-radius: 8px;
+      padding: 15px;
+      color: #856404;
+      font-size: 14px;
+      margin: 20px 0;
+    }
+    .footer {
+      background: #f8f9fa;
+      padding: 20px 30px;
+      text-align: center;
+      color: #666;
+      font-size: 14px;
+      border-top: 1px solid #eee;
+    }
+    .logo {
+      width: 50px;
+      height: 50px;
+      background: white;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      font-weight: bold;
+      color: #411E8A;
+      margin-bottom: 15px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="logo">B</div>
+      <h1>Botopia</h1>
+      <p style="margin: 10px 0 0 0; opacity: 0.9;">Código de Verificación</p>
+    </div>
+    
+    <div class="content">
+      <p class="greeting">¡Hola ${name}!</p>
+      <p class="instructions">
+        Para completar la verificación de tu cuenta, ingresa el siguiente código:
+      </p>
+      
+      <div class="code-container">
+        <div class="code-label">Tu código de verificación</div>
+        <div class="code">${code}</div>
+      </div>
+      
+      <p class="instructions">
+        ${
+          type === 'email'
+            ? 'Este código fue enviado a tu dirección de email.'
+            : 'Este código también fue enviado a tu WhatsApp.'
+        }
+      </p>
+      
+      <div class="warning">
+        ⚠️ Este código expira en <strong>5 minutos</strong>. No compartas este código con nadie.
+      </div>
+    </div>
+    
+    <div class="footer">
+      <p>
+        Si no solicitaste este código, puedes ignorar este email de forma segura.
+      </p>
+      <p>
+        © 2025 Botopia. Todos los derechos reservados.
+      </p>
+    </div>
+  </div>
+</body>
+</html>
+`
+
+// Función utilitaria para generar códigos OTP
+export const generateOTPCode = (): string => {
+  return Math.floor(100000 + Math.random() * 900000).toString()
+}
+
+// Función para formatear números de teléfono
+export const formatPhoneNumber = (
+  phone: string,
+  countryCode?: string
+): string => {
+  if (countryCode && !phone.startsWith('+')) {
+    return `${countryCode}${phone}`
+  }
+  return phone.startsWith('+') ? phone : `+${phone}`
+}
+
+// Constantes de tiempo
+export const OTP_EXPIRY_MINUTES = 5
+export const JWT_EXPIRY = '12h'
+export const MAX_OTP_ATTEMPTS = 3
+
+// Función para generar tokens de verificación para templates de WhatsApp
+export const generateVerificationToken = (
+  userId: number,
+  code: string
+): string => {
+  const timestamp = Date.now()
+  const tokenData = `${userId}-${code}-${timestamp}`
+  return Buffer.from(tokenData).toString('base64').substring(0, 10)
+}
+
+// Función para validar formato de número de teléfono
+export const isValidPhoneNumber = (phone: string): boolean => {
+  const phoneRegex = /^\+?[\d\s\-\(\)]{10,15}$/
+  return phoneRegex.test(phone)
+}

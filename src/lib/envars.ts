@@ -4,5 +4,7 @@ export const {
   host = '',
   port = '',
   dbname = '',
-  JWT_SECRET = ''
+  JWT_SECRET = '',
+  WHATSAPP_TOKEN = '',
+  WHATSAPP_PHONE_NUMBER_ID = ''
 } = Bun.env
