@@ -523,8 +523,7 @@ export const verificationCodeTemplate = (
             }
           </p>`
 }
-      
-      <div class="warning">
+        <div class="warning">
         ⚠️ Este ${
           type === 'magic_link' ? 'enlace' : 'código'
         } expira en <strong>30 minutos</strong>. 
@@ -539,6 +538,319 @@ export const verificationCodeTemplate = (
       <p>
         © 2025 Botopia. Todos los derechos reservados.
       </p>
+    </div>
+  </div>
+</body>
+</html>
+`
+
+export const resetPasswordTemplate = (code: string) => `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <meta name="supported-color-schemes" content="light dark">
+  <title>Restablecer Contraseña - Botopia</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --primary: #411E8A;
+      --secondary: #050044;
+      --tertiary: #FAECD4;
+      --accent: #010009;
+      --text-light: #FFFFFF;
+      --text-dark: #000000;
+      --border-color: rgba(65, 30, 138, 0.15);
+      --shadow-color: rgba(1, 0, 9, 0.2);
+    }
+
+    /* Dark mode variables */
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --primary: #5A2EBF;
+        --secondary: #050044;
+        --tertiary: #FAECD4;
+        --accent: #010009;
+        --text-light: #FFFFFF;
+        --text-dark: #E8DCC0;
+        --border-color: rgba(250, 236, 212, 0.2);
+        --shadow-color: rgba(0, 0, 0, 0.3);
+      }
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--tertiary);
+      margin: 0;
+      padding: 20px;
+      min-height: 100vh;
+    }
+    
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background: var(--text-light);
+      border-radius: 12px;
+      box-shadow: 0 8px 32px var(--shadow-color);
+      overflow: hidden;
+    }
+    
+    .header {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+      color: var(--tertiary);
+      padding: 30px;
+      text-align: center;
+    }
+    
+    .header h1 {
+      margin: 0;
+      font-size: 28px;
+      font-weight: 600;
+    }
+    
+    .content {
+      padding: 40px 30px;
+      text-align: center;
+    }
+    
+    .greeting {
+      font-size: 18px;
+      color: var(--accent);
+      margin-bottom: 20px;
+    }
+    
+    .code-container {
+      background: rgba(65, 30, 138, 0.05);
+      border: 2px dashed var(--primary);
+      border-radius: 12px;
+      padding: 30px;
+      margin: 30px 0;
+    }
+    
+    .code {
+      font-size: 36px;
+      font-weight: bold;
+      color: var(--primary);
+      letter-spacing: 8px;
+      font-family: 'Courier New', monospace;
+    }
+    
+    .code-label {
+      color: var(--secondary);
+      font-size: 14px;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 1px;
+    }
+    
+    .instructions {
+      color: var(--accent);
+      line-height: 1.6;
+      margin: 20px 0;
+    }
+    
+    .warning {
+      background: rgba(250, 236, 212, 0.7);
+      border: 1px solid var(--tertiary);
+      border-radius: 8px;
+      padding: 15px;
+      color: var(--secondary);
+      font-size: 14px;
+      margin: 20px 0;
+    }
+    
+    .footer {
+      background: rgba(5, 0, 68, 0.03);
+      padding: 20px 30px;
+      text-align: center;
+      color: var(--accent);
+      font-size: 14px;
+      border-top: 1px solid var(--border-color);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Restablecer tu Contraseña</h1>
+    </div>
+    <div class="content">
+      <p class="greeting">¡Hola!</p>
+      <p class="instructions">
+        Has solicitado restablecer tu contraseña. Utiliza el siguiente código para completar el proceso:
+      </p>
+      <div class="code-container">
+        <div class="code-label">Tu código de verificación</div>
+        <div class="code">${code}</div>
+      </div>
+      <p class="instructions">
+        Ingresa este código en la página de restablecimiento de contraseña para continuar.
+      </p>      <div class="warning">
+        Este código es válido por 30 minutos. Si no has solicitado restablecer tu contraseña, puedes ignorar este correo.
+      </div>
+    </div>
+    <div class="footer">
+      &copy; ${new Date().getFullYear()} Botopia. Todos los derechos reservados.
+    </div>
+  </div>
+</body>
+</html>
+`
+
+export const resetPasswordMagicLinkTemplate = (name: string, token: string) => `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <meta name="supported-color-schemes" content="light dark">
+  <title>Restablecer Contraseña - Botopia</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --primary: #411E8A;
+      --secondary: #050044;
+      --tertiary: #FAECD4;
+      --accent: #010009;
+      --text-light: #FFFFFF;
+      --text-dark: #000000;
+      --border-color: rgba(65, 30, 138, 0.15);
+      --shadow-color: rgba(1, 0, 9, 0.2);
+    }
+
+    /* Dark mode variables */
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --primary: #5A2EBF;
+        --secondary: #050044;
+        --tertiary: #FAECD4;
+        --accent: #010009;
+        --text-light: #FFFFFF;
+        --text-dark: #E8DCC0;
+        --border-color: rgba(250, 236, 212, 0.2);
+        --shadow-color: rgba(0, 0, 0, 0.3);
+      }
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--tertiary);
+      margin: 0;
+      padding: 20px;
+      min-height: 100vh;
+    }
+    
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background: var(--text-light);
+      border-radius: 12px;
+      box-shadow: 0 8px 32px var(--shadow-color);
+      overflow: hidden;
+    }
+    
+    .header {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+      color: var(--tertiary);
+      padding: 30px;
+      text-align: center;
+    }
+    
+    .header h1 {
+      margin: 0;
+      font-size: 28px;
+      font-weight: 600;
+    }
+    
+    .content {
+      padding: 40px 30px;
+      text-align: center;
+    }
+    
+    .greeting {
+      font-size: 18px;
+      color: var(--accent);
+      margin-bottom: 20px;
+    }
+    
+    .button {
+      display: inline-block;
+      background: var(--primary);
+      color: var(--text-light);
+      text-decoration: none;
+      padding: 16px 30px;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 16px;
+      margin: 20px 0;
+      box-shadow: 0 4px 8px var(--shadow-color);
+      transition: all 0.3s ease;
+      border: none;
+      cursor: pointer;
+      text-align: center;
+      width: 100%;
+      max-width: 250px;
+    }
+    
+    .button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px var(--shadow-color);
+      background: #5A2EBF; /* Versión más clara al pasar el mouse */
+    }
+    
+    .instructions {
+      color: var(--accent);
+      line-height: 1.6;
+      margin: 20px 0;
+    }
+    
+    .warning {
+      background: rgba(250, 236, 212, 0.7);
+      border: 1px solid var(--tertiary);
+      border-radius: 8px;
+      padding: 15px;
+      color: var(--secondary);
+      font-size: 14px;
+      margin: 20px 0;
+    }
+    
+    .footer {
+      background: rgba(5, 0, 68, 0.03);
+      padding: 20px 30px;
+      text-align: center;
+      color: var(--accent);
+      font-size: 14px;
+      border-top: 1px solid var(--border-color);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Restablecer tu Contraseña</h1>
+    </div>
+    <div class="content">
+      <p class="greeting">¡Hola ${name || 'Usuario'}!</p>
+      <p class="instructions">
+        Has solicitado restablecer tu contraseña. Para continuar, haz clic en el botón de abajo:
+      </p>
+      <a href="https://app.botopia.online/reset-password?token=${token}" class="button">
+        Cambiar mi contraseña
+      </a>      <p class="instructions">
+        Este enlace es válido por ${Math.round(
+          parseInt(RESET_PASSWORD_JWT_EXPIRY.replace('m', ''))
+        )} minutos. Si no solicitaste restablecer tu contraseña, puedes ignorar este correo.
+      </p>
+      <div class="warning">
+        Por seguridad, no compartas este enlace con nadie.
+      </div>
+    </div>
+    <div class="footer">
+      &copy; ${new Date().getFullYear()} Botopia. Todos los derechos reservados.
     </div>
   </div>
 </body>
@@ -575,8 +887,9 @@ export const formatPhoneNumber = (
 }
 
 // Constantes de tiempo
-export const OTP_EXPIRY_MINUTES = 5
+export const OTP_EXPIRY_MINUTES = 30 // Cambiado de 5 a 30 minutos
 export const JWT_EXPIRY = '12h'
+export const RESET_PASSWORD_JWT_EXPIRY = '10m' // 10 minutos para el token de restablecimiento
 export const MAX_OTP_ATTEMPTS = 3
 
 // Función para generar tokens de verificación para templates de WhatsApp
