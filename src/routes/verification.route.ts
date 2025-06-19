@@ -1,9 +1,46 @@
 import { client } from '@/config/db'
-import { verificationCodeTemplate } from '@/lib/constants'
+import { verificationCodeTemplate, welcomeUserTemplate } from '@/lib/constants'
 import { Elysia, t } from 'elysia'
 import { OTPService } from '@/services/otp.service'
 import { WhatsAppService } from '@/services/whatsapp.service'
 import { transporter, sendEmail } from '@/services/mail.service'
+
+// Función para verificar si el usuario está completamente verificado y enviar correo de bienvenida
+async function checkFullVerificationAndSendWelcome(
+  identifier: string,
+  type: 'email' | 'phone'
+) {
+  try {
+    // Obtener información actualizada del usuario
+    const user = await client
+      .query(
+        `SELECT id, username, email, "phoneNumber", "emailVerified", "phoneVerified" 
+         FROM public."User" 
+         WHERE ${type === 'email' ? 'email = $1' : '"phoneNumber" = $1'}`,
+        [identifier]
+      )
+      .then((result) => result.rows[0])
+
+    // Si ambos están verificados, enviar correo de bienvenida
+    if (user && user.emailVerified && user.phoneVerified) {
+      try {
+        await sendEmail({
+          to: user.email,
+          subject: '¡Bienvenido a Botopia!',
+          html: welcomeUserTemplate(user.username)
+        })
+        console.log(`Correo de bienvenida enviado a ${user.email}`)
+        return true
+      } catch (error) {
+        console.error('Error al enviar correo de bienvenida:', error)
+      }
+    }
+    return false
+  } catch (error) {
+    console.error('Error al verificar estado completo del usuario:', error)
+    return false
+  }
+}
 
 export const verificationRouter = new Elysia({ prefix: 'verification' })
   .post(
@@ -94,7 +131,6 @@ export const verificationRouter = new Elysia({ prefix: 'verification' })
           message: 'Número de teléfono requerido para verificación por WhatsApp'
         }
       }
-
       try {
         const identifier = type === 'email' ? email : phoneNumber
         const isValid = await OTPService.verifyOTP(identifier!, code, type)
@@ -116,6 +152,12 @@ export const verificationRouter = new Elysia({ prefix: 'verification' })
             [phoneNumber]
           )
         }
+
+        // Verificar si el usuario está completamente verificado y enviar correo de bienvenida si es así
+        await checkFullVerificationAndSendWelcome(
+          type === 'email' ? email! : phoneNumber!,
+          type
+        )
 
         return {
           message: 'Verificación exitosa',
@@ -336,13 +378,14 @@ export const verificationRouter = new Elysia({ prefix: 'verification' })
         await client.query(
           `UPDATE public."OTP" SET verified = true WHERE id = $1`,
           [otp.id]
-        )
-
-        // Actualizar el usuario como verificado
+        ) // Actualizar el usuario como verificado
         await client.query(
           `UPDATE public."User" SET "emailVerified" = true WHERE id = $1`,
           [otp.userId]
         )
+
+        // Verificar si el usuario está completamente verificado y enviar correo de bienvenida si es así
+        await checkFullVerificationAndSendWelcome(otp.email, 'email')
 
         // Redirigir al usuario a una página de éxito
 

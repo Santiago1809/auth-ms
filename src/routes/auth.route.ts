@@ -1,7 +1,7 @@
 import { client } from '@/config/db'
-import { welcomeUserTemplate, verificationCodeTemplate } from '@/lib/constants'
+import { verificationCodeTemplate } from '@/lib/constants'
 import { JWT_SECRET } from '@/lib/envars'
-import { transporter, sendEmail } from '@/services/mail.service'
+import { sendEmail } from '@/services/mail.service'
 import { OTPService } from '@/services/otp.service'
 import { WhatsAppService } from '@/services/whatsapp.service'
 import { Elysia, t } from 'elysia'
@@ -10,7 +10,14 @@ export const authRouter = new Elysia({ prefix: 'auth' })
   .post(
     '/signup',
     async ({ body, set }) => {
-      const { username, password, email, phoneNumber, countryCode, role = 'user' } = body
+      const {
+        username,
+        password,
+        email,
+        phoneNumber,
+        countryCode,
+        role = 'user'
+      } = body
 
       const existingUser = await client.query(
         `SELECT id FROM public."User" WHERE "phoneNumber" = $1 OR email = $2 OR username = $3`,
@@ -19,15 +26,21 @@ export const authRouter = new Elysia({ prefix: 'auth' })
 
       if (existingUser.rowCount !== 0) {
         set.status = 409
-        return { message: 'El usuario, correo o número de teléfono ya está en uso' }
+        return {
+          message: 'El usuario, correo o número de teléfono ya está en uso'
+        }
       }
 
-      const hashedPassword = await Bun.password.hash(password, { algorithm: 'bcrypt' })
-      const newUser = await client.query(
-        `INSERT INTO public."User"(username, password, email, "phoneNumber", "countryCode", role, "emailVerified", "phoneVerified") 
+      const hashedPassword = await Bun.password.hash(password, {
+        algorithm: 'bcrypt'
+      })
+      const newUser = await client
+        .query(
+          `INSERT INTO public."User"(username, password, email, "phoneNumber", "countryCode", role, "emailVerified", "phoneVerified") 
          VALUES ($1, $2, $3, $4, $5, $6, false, false) RETURNING *`,
-        [username, hashedPassword, email, phoneNumber, countryCode, role]
-      ).then(result => result.rows[0])
+          [username, hashedPassword, email, phoneNumber, countryCode, role]
+        )
+        .then((result) => result.rows[0])
 
       if (!newUser) {
         set.status = 500
@@ -46,14 +59,20 @@ export const authRouter = new Elysia({ prefix: 'auth' })
           sendEmail({
             to: email,
             subject: 'Verificación de cuenta - Botopia',
-            html: verificationCodeTemplate(username, emailVerificationToken, 'magic_link')
+            html: verificationCodeTemplate(
+              username,
+              emailVerificationToken,
+              'magic_link'
+            )
           })
         ])
       } catch (error) {
         console.error('Error enviando verificaciones:', error)
       }
 
-      const token = jwt.sign({ username, role: newUser.role }, JWT_SECRET, { expiresIn: '12h' })
+      const token = jwt.sign({ username, role: newUser.role }, JWT_SECRET, {
+        expiresIn: '12h'
+      })
 
       return {
         token,
@@ -63,7 +82,8 @@ export const authRouter = new Elysia({ prefix: 'auth' })
           requiresVerification: true,
           verificationStatus: { email: false, phone: false }
         },
-        message: 'Usuario creado. Se enviaron verificaciones por WhatsApp y email.'
+        message:
+          'Usuario creado. Se enviaron verificaciones por WhatsApp y email.'
       }
     },
     {
@@ -85,12 +105,14 @@ export const authRouter = new Elysia({ prefix: 'auth' })
         return { message: 'Username y password son requeridos' }
       }
 
-      const user = await client.query(
-        `SELECT id, username, password, email, "phoneNumber", role, "emailVerified", "phoneVerified" 
+      const user = await client
+        .query(
+          `SELECT id, username, password, email, "phoneNumber", role, "emailVerified", "phoneVerified" 
          FROM public."User" 
          WHERE username = $1 OR email = $1 OR "phoneNumber" = $1`,
-        [identifier]
-      ).then(result => result.rows[0])
+          [identifier]
+        )
+        .then((result) => result.rows[0])
 
       if (!user || !(await Bun.password.verify(password, user.password))) {
         set.status = 401
@@ -118,7 +140,9 @@ export const authRouter = new Elysia({ prefix: 'auth' })
           role: user.role,
           verificationStatus,
           isFullyVerified: verificationStatus.email && verificationStatus.phone,
-          needsVerification: !(verificationStatus.email && verificationStatus.phone)
+          needsVerification: !(
+            verificationStatus.email && verificationStatus.phone
+          )
         }
       }
     },

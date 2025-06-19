@@ -557,6 +557,6 @@ export const generateVerificationToken = (
 
 // Función para validar formato de número de teléfono
 export const isValidPhoneNumber = (phone: string): boolean => {
-  const phoneRegex = /^\+?[\d\s\-\(\)]{10,15}$/
+  const phoneRegex = /^\+?[\d\s\-()]{10,15}$/
   return phoneRegex.test(phone)
 }
