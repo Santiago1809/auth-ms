@@ -2,14 +2,10 @@ import { Elysia } from 'elysia'
 import { client } from './config/db'
 import { authRouter } from './routes/auth.route'
 import { verificationRouter } from './routes/verification.route'
-import { protectedRouter, authOnlyRouter } from './routes/protected.route'
 
 const app = new Elysia()
-  .get('/', () => 'Hello Elysia')
   .use(authRouter)
   .use(verificationRouter)
-  .use(protectedRouter)
-  .use(authOnlyRouter)
   .listen(3001)
 
 client.connect().then(() => {

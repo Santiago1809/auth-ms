@@ -3,7 +3,7 @@ import { verificationCodeTemplate } from '@/lib/constants'
 import { Elysia, t } from 'elysia'
 import { OTPService } from '@/services/otp.service'
 import { WhatsAppService } from '@/services/whatsapp.service'
-import { transporter } from '@/services/mail.service'
+import { transporter, sendEmail } from '@/services/mail.service'
 
 export const verificationRouter = new Elysia({ prefix: 'verification' })
   .post(
@@ -153,15 +153,15 @@ export const verificationRouter = new Elysia({ prefix: 'verification' })
 
         if (username) {
           userQuery =
-            'SELECT id, email, "phoneNumber", username FROM public."User" WHERE username = $1'
+            'SELECT id, email, "phoneNumber", "countryCode", username FROM public."User" WHERE username = $1'
           queryParam = username
         } else if (email) {
           userQuery =
-            'SELECT id, email, "phoneNumber", username FROM public."User" WHERE email = $1'
+            'SELECT id, email, "phoneNumber", "countryCode", username FROM public."User" WHERE email = $1'
           queryParam = email
         } else if (phoneNumber) {
           userQuery =
-            'SELECT id, email, "phoneNumber", username FROM public."User" WHERE "phoneNumber" = $1'
+            'SELECT id, email, "phoneNumber", "countryCode", username FROM public."User" WHERE "phoneNumber" = $1'
           queryParam = phoneNumber
         } else {
           set.status = 400
@@ -177,53 +177,73 @@ export const verificationRouter = new Elysia({ prefix: 'verification' })
           return { message: 'Usuario no encontrado' }
         }
 
-        // Determinar tipo de verificación
-        const verificationType = user.phoneNumber ? 'phone' : 'email'
-        const identifier = user.phoneNumber || user.email
+        let emailSent = false
+        let smsSent = false
 
-        // Invalidar códigos OTP anteriores
-        await client.query(
-          `UPDATE public."OTP" SET verified = true WHERE ${
-            verificationType === 'email' ? 'email' : '"phoneNumber"'
-          } = $1 AND verified = false`,
-          [identifier]
-        )
+        // Si el usuario tiene email y no está verificado, enviamos magic link
+        if (user.email && !user.emailVerified) {
+          // Invalidar códigos OTP anteriores
+          await client.query(
+            `UPDATE public."OTP" SET verified = true WHERE email = $1 AND verified = false`,
+            [user.email]
+          ) // Generar magic link para verificación de email
+          const emailVerificationToken = await OTPService.createOTP(
+            user.email,
+            'email',
+            user.id,
+            true // indicar que es un magic link
+          ) // Enviar magic link por email
+          await sendEmail({
+            to: user.email,
+            subject: 'Verificación de cuenta - Botopia',
+            html: verificationCodeTemplate(
+              user.username,
+              emailVerificationToken,
+              'magic_link'
+            )
+          })
 
-        // Generar nuevo código
-        const code = await OTPService.createOTP(
-          identifier,
-          verificationType,
-          user.id
-        )
+          emailSent = true
+        }
 
-        if (verificationType === 'phone') {
-          const sent = await WhatsAppService.sendOTPCode(
-            user.phoneNumber,
-            code,
+        // Si el usuario tiene teléfono y no está verificado, enviamos OTP por WhatsApp
+        if (user.phoneNumber && !user.phoneVerified) {
+          // Invalidar códigos OTP anteriores
+          await client.query(
+            `UPDATE public."OTP" SET verified = true WHERE "phoneNumber" = $1 AND verified = false`,
+            [user.phoneNumber]
+          ) // Generar nuevo código
+          const phoneIdentifier = `${(user.countryCode || '').replace(
+            '+',
+            ''
+          )}${user.phoneNumber}`
+          const otpCode = await OTPService.createOTP(
+            phoneIdentifier,
+            'phone',
             user.id
           )
+
+          // Enviar código por WhatsApp
+          const sent = await WhatsAppService.sendOTPCode(
+            phoneIdentifier,
+            otpCode,
+            user.id
+          )
+
           if (!sent) {
-            set.status = 500
-            return { message: 'Error al enviar código por WhatsApp' }
+            console.error('Error al enviar código por WhatsApp')
+          } else {
+            smsSent = true
           }
-        } else {
-          await transporter.sendMail({
-            from: `"Botopia Team" <contacto@botopia.tech>`,
-            to: user.email,
-            subject: 'Nuevo código de verificación - Botopia',
-            html: verificationCodeTemplate(user.username, code, 'email')
-          })
         }
 
         return {
-          message: `Nuevo código enviado por ${
-            verificationType === 'phone' ? 'WhatsApp' : 'email'
-          }`,
-          verificationType,
-          sent: true
+          message: 'Se han reenviado los códigos de verificación',
+          emailSent,
+          smsSent
         }
       } catch (error) {
-        console.error('Error resending OTP:', error)
+        console.error('Error resending verification:', error)
         set.status = 500
         return { message: 'Error interno del servidor' }
       }
@@ -240,7 +260,6 @@ export const verificationRouter = new Elysia({ prefix: 'verification' })
     '/status/:identifier',
     async ({ params, set }) => {
       const { identifier } = params
-
       try {
         // Buscar usuario por email, teléfono o username
         const user = await client
@@ -257,19 +276,20 @@ export const verificationRouter = new Elysia({ prefix: 'verification' })
           return { message: 'Usuario no encontrado' }
         }
 
-        const verificationType = user.phoneNumber ? 'phone' : 'email'
-        const isVerified = user.phoneNumber
-          ? user.phoneVerified
-          : user.emailVerified
+        // Verificamos si el usuario está completamente verificado
+        const isFullyVerified = user.emailVerified && user.phoneVerified
 
         return {
           user: {
             username: user.username,
             email: user.email,
             phoneNumber: user.phoneNumber,
-            verificationType,
-            isVerified,
-            needsVerification: !isVerified
+            verificationStatus: {
+              email: user.emailVerified,
+              phone: user.phoneVerified
+            },
+            isFullyVerified,
+            needsVerification: !isFullyVerified
           }
         }
       } catch (error) {
@@ -281,6 +301,61 @@ export const verificationRouter = new Elysia({ prefix: 'verification' })
     {
       params: t.Object({
         identifier: t.String()
+      })
+    }
+  )
+  .get(
+    '/verify-email',
+    async ({ query, set, redirect }) => {
+      const { token } = query
+
+      if (!token) {
+        set.status = 400
+        return { message: 'Token de verificación requerido' }
+      }
+
+      try {
+        // Buscar el OTP con el token proporcionado
+        const otpResult = await client.query(
+          `SELECT o.id, o.email, o."userId" FROM public."OTP" o 
+           WHERE o.code = $1 
+           AND o.verified = false 
+           AND o."expiresAt" > CURRENT_TIMESTAMP AT TIME ZONE 'UTC'
+           AND o.email IS NOT NULL`,
+          [token]
+        )
+
+        if (otpResult.rowCount === 0) {
+          set.status = 400
+          return { message: 'Token inválido o expirado' }
+        }
+
+        const otp = otpResult.rows[0]
+
+        // Marcar el OTP como verificado
+        await client.query(
+          `UPDATE public."OTP" SET verified = true WHERE id = $1`,
+          [otp.id]
+        )
+
+        // Actualizar el usuario como verificado
+        await client.query(
+          `UPDATE public."User" SET "emailVerified" = true WHERE id = $1`,
+          [otp.userId]
+        )
+
+        // Redirigir al usuario a una página de éxito
+
+        return redirect('https://app.botopia.online', 301)
+      } catch (error) {
+        console.error('Error verificando email:', error)
+        set.status = 500
+        return { message: 'Error interno del servidor' }
+      }
+    },
+    {
+      query: t.Object({
+        token: t.String()
       })
     }
   )

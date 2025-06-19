@@ -1,7 +1,7 @@
 import { client } from '@/config/db'
 import { welcomeUserTemplate, verificationCodeTemplate } from '@/lib/constants'
 import { JWT_SECRET } from '@/lib/envars'
-import { transporter } from '@/services/mail.service'
+import { transporter, sendEmail } from '@/services/mail.service'
 import { OTPService } from '@/services/otp.service'
 import { WhatsAppService } from '@/services/whatsapp.service'
 import { Elysia, t } from 'elysia'
@@ -10,154 +10,97 @@ export const authRouter = new Elysia({ prefix: 'auth' })
   .post(
     '/signup',
     async ({ body, set }) => {
-      if (!body.username || !body.password || !body.email) {
-        set.status = 400
-        return { message: 'Faltan datos para el registro' }
-      }
-      const res = await client
-        .query(
-          `SELECT id FROM public."User" WHERE "phoneNumber" = $1 OR email = $2 OR username = $3`,
-          [body.phoneNumber, body.email, body.username]
-        )
-        .then((result) => result.rowCount)
-      if (res !== 0) {
-        set.status = 409
-        return {
-          message: 'El usuario, correo o número de teléfono ya está en uso'
-        }
-      }
-      const hashedPassword = await Bun.password.hash(body.password, {
-        algorithm: 'bcrypt'
-      })
+      const { username, password, email, phoneNumber, countryCode, role = 'user' } = body
 
-      const query = await client
-        .query(
-          `INSERT INTO public."User"(username, password, email, "phoneNumber", "countryCode", role, "emailVerified", "phoneVerified") VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
-          [
-            body.username,
-            hashedPassword,
-            body.email,
-            body.phoneNumber,
-            body.countryCode,
-            body.role || 'user',
-            false, // emailVerified
-            false // phoneVerified
-          ]
-        )
-        .then((result) => result.rows)
-      if (query.length === 0) {
+      const existingUser = await client.query(
+        `SELECT id FROM public."User" WHERE "phoneNumber" = $1 OR email = $2 OR username = $3`,
+        [phoneNumber, email, username]
+      )
+
+      if (existingUser.rowCount !== 0) {
+        set.status = 409
+        return { message: 'El usuario, correo o número de teléfono ya está en uso' }
+      }
+
+      const hashedPassword = await Bun.password.hash(password, { algorithm: 'bcrypt' })
+      const newUser = await client.query(
+        `INSERT INTO public."User"(username, password, email, "phoneNumber", "countryCode", role, "emailVerified", "phoneVerified") 
+         VALUES ($1, $2, $3, $4, $5, $6, false, false) RETURNING *`,
+        [username, hashedPassword, email, phoneNumber, countryCode, role]
+      ).then(result => result.rows[0])
+
+      if (!newUser) {
         set.status = 500
         return { message: 'Error al crear el usuario' }
-      } // Determinar el tipo de verificación basado en la presencia de número de teléfono
-      const verificationType = body.phoneNumber ? 'phone' : 'email'
-      const identifier = body.phoneNumber || body.email
-
-      try {
-        // Generar y enviar código OTP
-        const otpCode = await OTPService.createOTP(
-          identifier,
-          verificationType,
-          query[0].id
-        )
-
-        if (verificationType === 'phone') {
-          const phone = `${(body.countryCode || '').replace('+', '')}${
-            body.phoneNumber
-          }`
-          // Enviar código por WhatsApp
-          const sent = await WhatsAppService.sendOTPCode(
-            phone,
-            otpCode,
-            query[0].id
-          )
-          if (!sent) {
-            console.error('Error al enviar código por WhatsApp')
-          }
-        } else {
-          // Enviar código por email
-          await transporter.sendMail({
-            from: `"Botopia Team" <contacto@botopia.tech>`,
-            to: body.email,
-            subject: 'Verificación de cuenta - Botopia',
-            html: verificationCodeTemplate(body.username, otpCode, 'email')
-          })
-        }
-      } catch (error) {
-        console.error('Error enviando código de verificación:', error)
       }
 
-      const token = jwt.sign(
-        { username: body.username, role: query[0].role },
-        JWT_SECRET,
-        { expiresIn: '12h' }
-      )
+      try {
+        const phoneIdentifier = `${countryCode.replace('+', '')}${phoneNumber}`
+        const [otpCode, emailVerificationToken] = await Promise.all([
+          OTPService.createOTP(phoneNumber, 'phone', newUser.id),
+          OTPService.createOTP(email, 'email', newUser.id, true)
+        ])
+
+        await Promise.all([
+          WhatsAppService.sendOTPCode(phoneIdentifier, otpCode, newUser.id),
+          sendEmail({
+            to: email,
+            subject: 'Verificación de cuenta - Botopia',
+            html: verificationCodeTemplate(username, emailVerificationToken, 'magic_link')
+          })
+        ])
+      } catch (error) {
+        console.error('Error enviando verificaciones:', error)
+      }
+
+      const token = jwt.sign({ username, role: newUser.role }, JWT_SECRET, { expiresIn: '12h' })
 
       return {
         token,
         user: {
-          username: body.username,
-          role: query[0].role,
+          username,
+          role: newUser.role,
           requiresVerification: true,
-          verificationType
+          verificationStatus: { email: false, phone: false }
         },
-        message: `Usuario creado. Se envió código de verificación por ${
-          verificationType === 'phone' ? 'WhatsApp' : 'email'
-        }`
+        message: 'Usuario creado. Se enviaron verificaciones por WhatsApp y email.'
       }
     },
     {
-      body: t.Partial(
-        t.Object({
-          active: t.Optional(t.Boolean()),
-          countryCode: t.Union([t.String(), t.Null()]),
-          createdAt: t.String(),
-          email: t.String({ format: 'email' }),
-          id: t.Number(),
-          password: t.String({ maxLength: 50, minLength: 8 }),
-          phoneNumber: t.Union([t.String(), t.Null()]),
-          tokensPerResponse: t.Optional(t.Number()),
-          updatedAt: t.String(),
-          username: t.String({ maxLength: 50, minLength: 3 }),
-          role: t.Enum({ user: 'user', admin: 'admin' })
-        })
-      )
+      body: t.Object({
+        email: t.String({ format: 'email' }),
+        password: t.String({ maxLength: 50, minLength: 8 }),
+        phoneNumber: t.String(),
+        countryCode: t.String(),
+        username: t.String({ maxLength: 50, minLength: 3 }),
+        role: t.Optional(t.Enum({ user: 'user', admin: 'admin' }))
+      })
     }
   )
   .post(
-    '/login',
-    async ({ body, set }) => {
-      if (!body.username || !body.password) {
+    '/signin',
+    async ({ body: { identifier, password }, set }) => {
+      if (!identifier || !password) {
         set.status = 400
         return { message: 'Username y password son requeridos' }
       }
 
-      const user = await client
-        .query(
-          `SELECT id, username, password, email, "phoneNumber", role, "emailVerified", "phoneVerified" 
-           FROM public."User" 
-           WHERE username = $1 OR email = $1`,
-          [body.username]
-        )
-        .then((result) => result.rows[0])
+      const user = await client.query(
+        `SELECT id, username, password, email, "phoneNumber", role, "emailVerified", "phoneVerified" 
+         FROM public."User" 
+         WHERE username = $1 OR email = $1 OR "phoneNumber" = $1`,
+        [identifier]
+      ).then(result => result.rows[0])
 
-      if (!user) {
+      if (!user || !(await Bun.password.verify(password, user.password))) {
         set.status = 401
         return { message: 'Credenciales inválidas' }
       }
 
-      const isValidPassword = await Bun.password.verify(
-        body.password,
-        user.password
-      )
-      if (!isValidPassword) {
-        set.status = 401
-        return { message: 'Credenciales inválidas' }
+      const verificationStatus = {
+        email: user.emailVerified || false,
+        phone: user.phoneVerified || false
       }
-
-      // Verificar si el usuario necesita verificación
-      const needsVerification = user.phoneNumber
-        ? !user.phoneVerified
-        : !user.emailVerified
 
       const token = jwt.sign(
         { username: user.username, role: user.role, userId: user.id },
@@ -173,15 +116,15 @@ export const authRouter = new Elysia({ prefix: 'auth' })
           email: user.email,
           phoneNumber: user.phoneNumber,
           role: user.role,
-          emailVerified: user.emailVerified,
-          phoneVerified: user.phoneVerified,
-          needsVerification
+          verificationStatus,
+          isFullyVerified: verificationStatus.email && verificationStatus.phone,
+          needsVerification: !(verificationStatus.email && verificationStatus.phone)
         }
       }
     },
     {
       body: t.Object({
-        username: t.String(),
+        identifier: t.String(),
         password: t.String()
       })
     }

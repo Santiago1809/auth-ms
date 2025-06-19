@@ -39,10 +39,7 @@ export const sendEmail = async (options: {
       from: process.env.SMTP_USER,
       ...options
     }
-
-    console.error('📧 Intentando enviar correo a:', options.to)
     const info = await transporter.sendMail(mailOptions)
-    console.error('✅ Correo enviado exitosamente:', info.messageId)
     return { success: true, messageId: info.messageId }
   } catch (error) {
     console.error('❌ Error al enviar correo:', error)

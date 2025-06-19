@@ -332,7 +332,7 @@ export const welcomeUserTemplate = (name: string) => `
 export const verificationCodeTemplate = (
   name: string,
   code: string,
-  type: 'email' | 'phone'
+  type: 'email' | 'phone' | 'magic_link'
 ) => `
 <!DOCTYPE html>
 <html lang="es">
@@ -425,51 +425,82 @@ export const verificationCodeTemplate = (
       height: 50px;
       background: white;
       border-radius: 50%;
-      display: inline-flex;
+      display: flex;
       align-items: center;
+      text-align: center;
       justify-content: center;
       font-size: 24px;
       font-weight: bold;
       color: #411E8A;
       margin-bottom: 15px;
     }
+    .button {
+      display: inline-block;
+      background: linear-gradient(135deg, #411E8A 0%, #362075 100%);
+      color: white;
+      text-decoration: none;
+      padding: 16px 30px;
+      border-radius: 8px;
+      font-weight: 600;
+      margin: 20px 0;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      transition: all 0.3s ease;
+    }
+    .button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+    }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="header">
-      <div class="logo">B</div>
       <h1>Botopia</h1>
-      <p style="margin: 10px 0 0 0; opacity: 0.9;">Código de Verificación</p>
+      <p style="margin: 10px 0 0 0; opacity: 0.9;">
+        ${
+          type === 'magic_link'
+            ? 'Verificación de Email'
+            : 'Código de Verificación'
+        }
+      </p>
     </div>
     
     <div class="content">
-      <p class="greeting">¡Hola ${name}!</p>
-      <p class="instructions">
-        Para completar la verificación de tu cuenta, ingresa el siguiente código:
-      </p>
-      
-      <div class="code-container">
-        <div class="code-label">Tu código de verificación</div>
-        <div class="code">${code}</div>
-      </div>
-      
-      <p class="instructions">
-        ${
-          type === 'email'
-            ? 'Este código fue enviado a tu dirección de email.'
-            : 'Este código también fue enviado a tu WhatsApp.'
-        }
-      </p>
+      <p class="greeting">¡Hola ${name}!</p>          ${
+  type === 'magic_link'
+    ? `<p class="instructions">
+            Para verificar tu dirección de email, haz clic en el botón de abajo:
+          </p>
+          <a href="http://localhost:3001/verification/verify-email?token=${code}" class="button">
+            Verificar mi email
+          </a>`
+    : `<p class="instructions">
+            Para completar la verificación de tu cuenta, ingresa el siguiente código:
+          </p>
+          <div class="code-container">
+            <div class="code-label">Tu código de verificación</div>
+            <div class="code">${code}</div>
+          </div>
+          <p class="instructions">
+            ${
+              type === 'email'
+                ? 'Este código fue enviado a tu dirección de email.'
+                : 'Este código fue enviado a tu WhatsApp.'
+            }
+          </p>`
+}
       
       <div class="warning">
-        ⚠️ Este código expira en <strong>5 minutos</strong>. No compartas este código con nadie.
+        ⚠️ Este ${
+          type === 'magic_link' ? 'enlace' : 'código'
+        } expira en <strong>5 minutos</strong>. 
+        ${type !== 'magic_link' ? 'No compartas este código con nadie.' : ''}
       </div>
     </div>
     
     <div class="footer">
       <p>
-        Si no solicitaste este código, puedes ignorar este email de forma segura.
+        Si no solicitaste esta verificación, puedes ignorar este mensaje de forma segura.
       </p>
       <p>
         © 2025 Botopia. Todos los derechos reservados.
@@ -481,7 +512,20 @@ export const verificationCodeTemplate = (
 `
 
 // Función utilitaria para generar códigos OTP
-export const generateOTPCode = (): string => {
+export const generateOTPCode = (isMagicLink = false): string => {
+  if (isMagicLink) {
+    // Para magic links, generar un token alfanumérico de 6 caracteres
+    // Esto es compatible con la restricción de la columna 'code' VARCHAR(6)
+    const chars =
+      'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
+    let token = ''
+    for (let i = 0; i < 6; i++) {
+      token += chars.charAt(Math.floor(Math.random() * chars.length))
+    }
+    return token
+  }
+
+  // Para códigos OTP, generar un código numérico de 6 dígitos
   return Math.floor(100000 + Math.random() * 900000).toString()
 }
 

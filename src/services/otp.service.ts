@@ -12,15 +12,17 @@ export interface OTPRecord {
   createdAt: Date
 }
 
-export class OTPService {  static async createOTP(
+export class OTPService {
+  static async createOTP(
     identifier: string,
     type: 'email' | 'phone',
-    userId?: number
+    userId?: number,
+    isMagicLink: boolean = false
   ): Promise<string> {
-    const code = generateOTPCode()
+    const code = generateOTPCode(isMagicLink)
     // Crear fecha de expiración en UTC explícitamente
     const expiresAt = new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000)
-    
+
     const query = `
       INSERT INTO public."OTP" (
         "userId", 
@@ -32,7 +34,12 @@ export class OTPService {  static async createOTP(
       RETURNING code
     `
 
-    await client.query(query, [userId || null, identifier, code, expiresAt.toISOString()])
+    await client.query(query, [
+      userId || null,
+      identifier,
+      code,
+      expiresAt.toISOString()
+    ])
     return code
   }
   static async verifyOTP(
@@ -41,12 +48,12 @@ export class OTPService {  static async createOTP(
     type: 'email' | 'phone'
   ): Promise<boolean> {
     // En PostgreSQL, no se puede usar ORDER BY y LIMIT directamente en un UPDATE
-    // Primero obtenemos el ID del OTP más reciente que cumpla los criterios    
-     const findQuery = `
+    // Primero obtenemos el ID del OTP más reciente que cumpla los criterios
+    const findQuery = `
       SELECT id FROM public."OTP"
       WHERE ${type === 'email' ? 'email' : '"phoneNumber"'} = $1 
         AND code = $2 
-        AND "expiresAt" > CURRENT_TIMESTAMP AT TIME ZONE 'UTC'
+        AND "expiresAt" > CURRENT_TIMESTAMP
         AND verified = false
       ORDER BY "createdAt" DESC
       LIMIT 1
