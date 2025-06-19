@@ -12,6 +12,15 @@ export interface UserContext {
   phoneNumber: string | null
 }
 
+// Interfaz para el token JWT decodificado
+interface JWTPayload {
+  username: string
+  role?: string
+  // Añade otros campos según lo que contenga tu token JWT
+  iat?: number
+  exp?: number
+}
+
 export const auth = (app: Elysia) =>
   app.derive(async ({ headers, set }) => {
     const authorization = headers['authorization']
@@ -20,11 +29,10 @@ export const auth = (app: Elysia) =>
       set.status = 401
       throw new Error('Token de autorización requerido')
     }
-
     const token = authorization.split(' ')[1]
 
     try {
-      const decoded = jwt.verify(token, JWT_SECRET) as any
+      const decoded = jwt.verify(token, JWT_SECRET) as JWTPayload
 
       // Verificar que el usuario existe y obtener su estado de verificación
       const userResult = await client.query(
@@ -50,7 +58,7 @@ export const auth = (app: Elysia) =>
           phoneNumber: user.phoneNumber
         } as UserContext
       }
-    } catch (error) {
+    } catch {
       set.status = 401
       throw new Error('Token inválido')
     }
