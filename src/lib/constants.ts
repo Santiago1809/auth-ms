@@ -10,33 +10,27 @@ export const welcomeUserTemplate = (name: string) => `
   <style>
     :root {
       color-scheme: light dark;
-      --bg-primary: #FAECD4;
-      --bg-secondary: #F5E6C8;
-      --bg-card: #FFFFFF;
-      --text-primary: #411E8A;
-      --text-secondary: #362075;
-      --text-muted: #6B4C93;
-      --accent-primary: #411E8A;
-      --accent-secondary: #362075;
+      --primary: #411E8A;
+      --secondary: #050044;
+      --tertiary: #FAECD4;
+      --accent: #010009;
+      --text-light: #FFFFFF;
+      --text-dark: #000000;
       --border-color: rgba(65, 30, 138, 0.15);
-      --shadow-color: rgba(65, 30, 138, 0.1);
-      --feature-bg: rgba(65, 30, 138, 0.08);
+      --shadow-color: rgba(1, 0, 9, 0.2);
     }
 
     /* Dark mode variables */
     @media (prefers-color-scheme: dark) {
       :root {
-        --bg-primary: #0A0A1A;
-        --bg-secondary: #1A1A2E;
-        --bg-card: #16213E;
-        --text-primary: #FAECD4;
-        --text-secondary: #E8DCC0;
-        --text-muted: #C4B5A0;
-        --accent-primary: #6B4C93;
-        --accent-secondary: #8A6BAE;
+        --primary: #5A2EBF;
+        --secondary: #050044;
+        --tertiary: #FAECD4;
+        --accent: #010009;
+        --text-light: #FFFFFF;
+        --text-dark: #E8DCC0;
         --border-color: rgba(250, 236, 212, 0.2);
         --shadow-color: rgba(0, 0, 0, 0.3);
-        --feature-bg: rgba(107, 76, 147, 0.15);
       }
     }
 
@@ -46,27 +40,27 @@ export const welcomeUserTemplate = (name: string) => `
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-      background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+      background-color: var(--tertiary);
       margin: 0;
       padding: 20px;
       line-height: 1.6;
       color: var(--text-primary);
       min-height: 100vh;
-    }
-
-    .email-wrapper {
+    }    .email-wrapper {
       max-width: 600px;
       margin: 0 auto;
-      background: var(--bg-card);
+      background: var(--text-light);
       border-radius: 16px;
       overflow: hidden;
       box-shadow: 0 20px 40px var(--shadow-color);
       border: 1px solid var(--border-color);
-    }    .header {
-      background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
+    }
+    
+    .header {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
       padding: 40px 30px;
       text-align: center;
-      color: #FFFFFF;
+      color: var(--tertiary);
       position: relative;
       overflow: hidden;
     }
@@ -106,7 +100,7 @@ export const welcomeUserTemplate = (name: string) => `
 
     .content {
       padding: 40px 30px;
-      color: var(--text-primary);
+      color: var(--secondary);
     }
 
     .greeting {
@@ -116,13 +110,13 @@ export const welcomeUserTemplate = (name: string) => `
     }
 
     .highlight {
-      color: var(--accent-primary);
+      color: var(--primary);
       font-weight: 700;
     }
 
     .description {
       font-size: 16px;
-      color: var(--text-secondary);
+      color: var(--accent);
       margin-bottom: 32px;
     }
 
@@ -134,7 +128,7 @@ export const welcomeUserTemplate = (name: string) => `
       font-size: 18px;
       font-weight: 600;
       margin-bottom: 20px;
-      color: var(--text-primary);
+      color: var(--primary);
     }
 
     .features-grid {
@@ -145,7 +139,7 @@ export const welcomeUserTemplate = (name: string) => `
     }
 
     .feature-card {
-      background: var(--feature-bg);
+      background: rgba(65, 30, 138, 0.05);
       padding: 20px;
       border-radius: 12px;
       border: 1px solid var(--border-color);
@@ -167,48 +161,53 @@ export const welcomeUserTemplate = (name: string) => `
     .feature-text {
       font-size: 14px;
       font-weight: 600;
-      color: var(--text-primary);
+      color: var(--primary);
     }
 
     .credits-section {
-      background: linear-gradient(135deg, var(--feature-bg) 0%, rgba(107, 76, 147, 0.05) 100%);
+      background: rgba(65, 30, 138, 0.05);
       padding: 24px;
       border-radius: 12px;
       border: 1px solid var(--border-color);
       margin: 32px 0;
       text-align: center;
-    }    .credits-amount {
+    }
+    
+    .credits-amount {
       font-size: 24px;
       font-weight: 700;
-      color: #6B4C93;
+      color: var(--primary);
       margin-bottom: 8px;
     }
 
     .credits-text {
       font-size: 16px;
-      color: var(--text-secondary);
+      color: var(--secondary);
     }
 
     .cta-section {
       text-align: center;
       margin: 32px 0;
-    }    .cta-button {
+    }
+      .cta-button {
       display: inline-block;
-      background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
-      color:  #6B4C93 !important;
+      background: var(--primary);
+      color: var(--text-light) !important;
       text-decoration: none;
       padding: 16px 32px;
-      border-radius: 8px;
+      border-radius: 10px;
       font-weight: 600;
       font-size: 16px;
       transition: all 0.3s ease;
-      box-shadow: 0 4px 12px rgba(65, 30, 138, 0.3);
-    }
-
-    .cta-button:hover {
+      box-shadow: 0 4px 12px var(--shadow-color);
+      border: none;
+      cursor: pointer;
+      text-align: center;
+    }    .cta-button:hover {
       transform: translateY(-2px);
-      box-shadow: 0 8px 20px rgba(65, 30, 138, 0.4);
+      box-shadow: 0 8px 20px var(--shadow-color);
       text-decoration: none;
+      background: #5A2EBF; /* Versión más clara al pasar el mouse */
     }
 
     .footer {
@@ -339,11 +338,39 @@ export const verificationCodeTemplate = (
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <meta name="supported-color-schemes" content="light dark">
   <title>Código de Verificación - Botopia</title>
   <style>
+    :root {
+      color-scheme: light dark;
+      --primary: #411E8A;
+      --secondary: #050044;
+      --tertiary: #FAECD4;
+      --accent: #010009;
+      --text-light: #FFFFFF;
+      --text-dark: #000000;
+      --border-color: rgba(65, 30, 138, 0.15);
+      --shadow-color: rgba(1, 0, 9, 0.2);
+    }
+
+    /* Dark mode variables */
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --primary: #5A2EBF;
+        --secondary: #050044;
+        --tertiary: #FAECD4;
+        --accent: #010009;
+        --text-light: #FFFFFF;
+        --text-dark: #E8DCC0;
+        --border-color: rgba(250, 236, 212, 0.2);
+        --shadow-color: rgba(0, 0, 0, 0.3);
+      }
+    }
+    
     body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--tertiary);
       margin: 0;
       padding: 20px;
       min-height: 100vh;
@@ -351,14 +378,14 @@ export const verificationCodeTemplate = (
     .container {
       max-width: 600px;
       margin: 0 auto;
-      background: white;
+      background: var(--text-light);
       border-radius: 12px;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+      box-shadow: 0 8px 32px var(--shadow-color);
       overflow: hidden;
     }
     .header {
-      background: linear-gradient(135deg, #411E8A 0%, #362075 100%);
-      color: white;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+      color: var(--tertiary);
       padding: 30px;
       text-align: center;
     }
@@ -373,12 +400,12 @@ export const verificationCodeTemplate = (
     }
     .greeting {
       font-size: 18px;
-      color: #333;
+      color: var(--accent);
       margin-bottom: 20px;
     }
     .code-container {
-      background: #f8f9ff;
-      border: 2px dashed #411E8A;
+      background: rgba(65, 30, 138, 0.05);
+      border: 2px dashed var(--primary);
       border-radius: 12px;
       padding: 30px;
       margin: 30px 0;
@@ -386,12 +413,12 @@ export const verificationCodeTemplate = (
     .code {
       font-size: 36px;
       font-weight: bold;
-      color: #411E8A;
+      color: var(--primary);
       letter-spacing: 8px;
       font-family: 'Courier New', monospace;
     }
     .code-label {
-      color: #666;
+      color: var(--secondary);
       font-size: 14px;
       margin-bottom: 10px;
       text-transform: uppercase;
@@ -399,26 +426,26 @@ export const verificationCodeTemplate = (
       letter-spacing: 1px;
     }
     .instructions {
-      color: #555;
+      color: var(--accent);
       line-height: 1.6;
       margin: 20px 0;
     }
     .warning {
-      background: #fff3cd;
-      border: 1px solid #ffeaa7;
+      background: rgba(250, 236, 212, 0.7);
+      border: 1px solid var(--tertiary);
       border-radius: 8px;
       padding: 15px;
-      color: #856404;
+      color: var(--secondary);
       font-size: 14px;
       margin: 20px 0;
     }
     .footer {
-      background: #f8f9fa;
+      background: rgba(5, 0, 68, 0.03);
       padding: 20px 30px;
       text-align: center;
-      color: #666;
+      color: var(--accent);
       font-size: 14px;
-      border-top: 1px solid #eee;
+      border-top: 1px solid var(--border-color);
     }
     .logo {
       width: 50px;
@@ -433,22 +460,30 @@ export const verificationCodeTemplate = (
       font-weight: bold;
       color: #411E8A;
       margin-bottom: 15px;
-    }
+    }    
     .button {
       display: inline-block;
-      background: linear-gradient(135deg, #411E8A 0%, #362075 100%);
-      color: white;
+      background: var(--primary);
+      color: var(--text-light);
       text-decoration: none;
       padding: 16px 30px;
-      border-radius: 8px;
+      border-radius: 10px;
       font-weight: 600;
+      font-size: 16px;
       margin: 20px 0;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      box-shadow: 0 4px 8px var(--shadow-color);
       transition: all 0.3s ease;
+      border: none;
+      cursor: pointer;
+      text-align: center;
+      width: 100%;
+      max-width: 250px;
     }
     .button:hover {
       transform: translateY(-2px);
-      box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+      box-shadow: 0 6px 12px var(--shadow-color);
+      background: #5A2EBF;
+      color: var(--text-light);
     }
   </style>
 </head>
@@ -470,8 +505,7 @@ export const verificationCodeTemplate = (
   type === 'magic_link'
     ? `<p class="instructions">
             Para verificar tu dirección de email, haz clic en el botón de abajo:
-          </p>
-          <a href="http://localhost:3001/verification/verify-email?token=${code}" class="button">
+          </p>          <a href="https://app.botopia.online/verification/verify-email?token=${code}" class="button">
             Verificar mi email
           </a>`
     : `<p class="instructions">
@@ -493,7 +527,7 @@ export const verificationCodeTemplate = (
       <div class="warning">
         ⚠️ Este ${
           type === 'magic_link' ? 'enlace' : 'código'
-        } expira en <strong>5 minutos</strong>. 
+        } expira en <strong>30 minutos</strong>. 
         ${type !== 'magic_link' ? 'No compartas este código con nadie.' : ''}
       </div>
     </div>

@@ -29,7 +29,6 @@ async function checkFullVerificationAndSendWelcome(
           subject: '¡Bienvenido a Botopia!',
           html: welcomeUserTemplate(user.username)
         })
-        console.log(`Correo de bienvenida enviado a ${user.email}`)
         return true
       } catch (error) {
         console.error('Error al enviar correo de bienvenida:', error)
