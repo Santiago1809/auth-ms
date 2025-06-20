@@ -20,7 +20,7 @@ const app = new Elysia()
   .use(
     cron({
       name: 'heartbeat',
-      pattern: '* * */24 * * *',
+      pattern: '* */30 * * * *',
       run() {
         OTPService.cleanExpiredOTPs()
       }
