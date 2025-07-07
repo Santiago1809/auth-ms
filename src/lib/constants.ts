@@ -1,3 +1,5 @@
+import { FRONTEND_URL } from "./envars"
+
 export const welcomeUserTemplate = (name: string) => `
 <!DOCTYPE html>
 <html lang="es">
@@ -310,7 +312,7 @@ export const welcomeUserTemplate = (name: string) => `
       </section>
 
       <div class="cta-section">
-        <a href="https://app.botopia.online" class="cta-button">Comenzar Ahora</a>
+        <a href="${FRONTEND_URL}" class="cta-button">Comenzar Ahora</a>
       </div>
 
       <p class="description">
@@ -331,7 +333,8 @@ export const welcomeUserTemplate = (name: string) => `
 export const verificationCodeTemplate = (
   name: string,
   code: string,
-  type: 'email' | 'phone' | 'magic_link'
+  type: 'email' | 'phone' | 'magic_link',
+  email?: string
 ) => `
 <!DOCTYPE html>
 <html lang="es">
@@ -505,7 +508,7 @@ export const verificationCodeTemplate = (
   type === 'magic_link'
     ? `<p class="instructions">
             Para verificar tu dirección de email, haz clic en el botón de abajo:
-          </p>          <a href="https://app.botopia.online/verification/verify-email?token=${code}" class="button">
+          </p>          <a href="${FRONTEND_URL}/verification/verify-email?token=${code}&email=${email}" class="button">
             Verificar mi email
           </a>`
     : `<p class="instructions">
@@ -700,7 +703,7 @@ export const resetPasswordTemplate = (code: string) => `
 </html>
 `
 
-export const resetPasswordMagicLinkTemplate = (name: string, token: string) => `
+export const resetPasswordMagicLinkTemplate = (name: string, token: string, email: string) => `
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -838,7 +841,7 @@ export const resetPasswordMagicLinkTemplate = (name: string, token: string) => `
       <p class="instructions">
         Has solicitado restablecer tu contraseña. Para continuar, haz clic en el botón de abajo:
       </p>
-      <a href="https://app.botopia.online/reset-password?token=${token}" class="button">
+      <a href="${FRONTEND_URL}/change-password?token=${token}&email=${email}" class="button">
         Cambiar mi contraseña
       </a>      <p class="instructions">
         Este enlace es válido por ${Math.round(

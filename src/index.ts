@@ -10,23 +10,29 @@ import { OTPService } from './services/otp.service'
 const app = new Elysia()
   .use(
     cors({
-      origin: [API_GATEWAY_URL],
+      origin: API_GATEWAY_URL,
       preflight: false
     })
   )
+  .get('/health', () => ({
+    status: 'healthy',
+    service: 'auth-ms',
+    timestamp: new Date().toISOString(),
+    database: 'connected'
+  }))
   .use(authRouter)
   .use(verificationRouter)
   .use(authOnlyRouter)
   .use(
     cron({
-      name: 'heartbeat',
+      name: 'clean_otp',
       pattern: '* */30 * * * *',
       run() {
         OTPService.cleanExpiredOTPs()
       }
     })
   )
-  .listen(3001)
+  .listen(3002)
 
 client.connect().then(() => {
   console.log(

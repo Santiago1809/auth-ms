@@ -3,13 +3,13 @@ import { generateOTPCode, OTP_EXPIRY_MINUTES } from '@/lib/constants'
 
 export interface OTPRecord {
   id: number
-  userId?: number
+  user_id?: number
   email?: string
-  phoneNumber?: string
+  phone_number?: string
   code: string
-  expiresAt: Date
+  expires_at: Date
   verified: boolean
-  createdAt: Date
+  created_at: Date
 }
 
 export class OTPService {
@@ -24,11 +24,11 @@ export class OTPService {
     const expiresAt = new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000)
 
     const query = `
-      INSERT INTO public."OTP" (
-        "userId", 
-        ${type === 'email' ? 'email' : '"phoneNumber"'}, 
+      INSERT INTO public.otp (
+        user_id, 
+        ${type === 'email' ? 'email' : 'phone_number'}, 
         code, 
-        "expiresAt"
+        expires_at
       ) 
       VALUES ($1, $2, $3, $4) 
       RETURNING code
@@ -50,24 +50,23 @@ export class OTPService {
     // En PostgreSQL, no se puede usar ORDER BY y LIMIT directamente en un UPDATE
     // Primero obtenemos el ID del OTP más reciente que cumpla los criterios
     const findQuery = `
-      SELECT id FROM public."OTP"
-      WHERE ${type === 'email' ? 'email' : '"phoneNumber"'} = $1 
+      SELECT id FROM public.otp
+      WHERE ${type === 'email' ? 'email' : 'phone_number'} = $1 
         AND code = $2 
-        AND "expiresAt" > CURRENT_TIMESTAMP
+        AND expires_at > CURRENT_TIMESTAMP
         AND verified = false
-      ORDER BY "createdAt" DESC
+      ORDER BY created_at DESC
       LIMIT 1
     `
 
     const findResult = await client.query(findQuery, [identifier, code])
-
     if (findResult.rowCount === 0) {
       return false
     }
 
     // Luego actualizamos ese OTP específico
     const updateQuery = `
-      UPDATE public."OTP" 
+      UPDATE public.otp 
       SET verified = true 
       WHERE id = $1
       RETURNING id
@@ -78,7 +77,7 @@ export class OTPService {
   }
   static async cleanExpiredOTPs(): Promise<void> {
     await client.query(
-      'DELETE FROM public."OTP" WHERE "expiresAt" < CURRENT_TIMESTAMP AT TIME ZONE \'UTC\''
+      "DELETE FROM public.otp WHERE expires_at < CURRENT_TIMESTAMP AT TIME ZONE 'UTC'"
     )
   }
 
@@ -87,10 +86,10 @@ export class OTPService {
     type: 'email' | 'phone'
   ): Promise<boolean> {
     const query = `
-      SELECT id FROM public."OTP" 
-      WHERE ${type === 'email' ? 'email' : '"phoneNumber"'} = $1 
+      SELECT id FROM public.otp 
+      WHERE ${type === 'email' ? 'email' : 'phone_number'} = $1 
         AND verified = true 
-      ORDER BY "createdAt" DESC 
+      ORDER BY created_at DESC 
       LIMIT 1
     `
 

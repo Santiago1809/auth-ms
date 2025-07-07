@@ -20,7 +20,7 @@ export const authRouter = new Elysia({ prefix: 'auth' })
       } = body
 
       const existingUser = await client.query(
-        `SELECT id FROM public."User" WHERE "phoneNumber" = $1 OR email = $2 OR username = $3`,
+        `SELECT id FROM public."user" WHERE phone_number = $1 OR email = $2 OR username = $3`,
         [phoneNumber, email, username]
       )
 
@@ -36,7 +36,7 @@ export const authRouter = new Elysia({ prefix: 'auth' })
       })
       const newUser = await client
         .query(
-          `INSERT INTO public."User"(username, password, email, "phoneNumber", "countryCode", role, "emailVerified", "phoneVerified") 
+          `INSERT INTO public."user"(username, password, email, phone_number, country_code, role, email_verified, phone_verified) 
          VALUES ($1, $2, $3, $4, $5, $6, false, false) RETURNING *`,
           [username, hashedPassword, email, phoneNumber, countryCode, role]
         )
@@ -62,7 +62,8 @@ export const authRouter = new Elysia({ prefix: 'auth' })
             html: verificationCodeTemplate(
               username,
               emailVerificationToken,
-              'magic_link'
+              'magic_link',
+              email
             )
           })
         ])
@@ -107,9 +108,9 @@ export const authRouter = new Elysia({ prefix: 'auth' })
 
       const user = await client
         .query(
-          `SELECT id, username, password, email, "phoneNumber", role, "emailVerified", "phoneVerified" 
-         FROM public."User" 
-         WHERE username = $1 OR email = $1 OR "phoneNumber" = $1`,
+          `SELECT id, username, password, email, phone_number, role, email_verified, phone_verified 
+         FROM public."user" 
+         WHERE username = $1 OR email = $1 OR phone_number = $1`,
           [identifier]
         )
         .then((result) => result.rows[0])
@@ -120,8 +121,8 @@ export const authRouter = new Elysia({ prefix: 'auth' })
       }
 
       const verificationStatus = {
-        email: user.emailVerified || false,
-        phone: user.phoneVerified || false
+        email: user.email_verified || false,
+        phone: user.phone_verified || false
       }
 
       const token = jwt.sign(
@@ -136,7 +137,7 @@ export const authRouter = new Elysia({ prefix: 'auth' })
           id: user.id,
           username: user.username,
           email: user.email,
-          phoneNumber: user.phoneNumber,
+          phoneNumber: user.phone_number,
           role: user.role,
           verificationStatus,
           isFullyVerified: verificationStatus.email && verificationStatus.phone,

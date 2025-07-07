@@ -35,7 +35,7 @@ export type WhatsAppMessage = WhatsAppTextMessage | WhatsAppTemplateMessage
 
 export class WhatsAppService {
   private static readonly BASE_URL =
-    'https://graph.facebook.com/v17.0/659221160602229/messages'
+    'https://graph.facebook.com/v17.0'
   static async sendMessage(
     phoneNumber: string,
     message: string
@@ -116,7 +116,6 @@ export class WhatsAppService {
           components
         }
       }
-
       const response = await fetch(
         `${this.BASE_URL}/${WHATSAPP_PHONE_NUMBER_ID}/messages`,
         {
@@ -171,8 +170,8 @@ export class WhatsAppService {
     // Usar el template "dumar_auth" como en el ejemplo
     return this.sendTemplateMessage(
       phoneNumber,
-      'dumar_auth', // Nombre del template
-      'es', // Idioma
+      'baruc_login_auth', // Nombre del template
+      'es', // Idioma (español colombiano)
       [code, '+573001234567'], // Parámetros del body: código y número fijo de contacto
       [code] // Parámetro del botón: el código OTP para copiar
     )

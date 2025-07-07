@@ -23,6 +23,7 @@ interface JWTPayload {
 
 export const auth = (app: Elysia) =>
   app.derive(async ({ headers, set }) => {
+    console.log(headers['authorization'])
     const authorization = headers['authorization']
 
     if (!authorization || !authorization.startsWith('Bearer ')) {
@@ -36,8 +37,8 @@ export const auth = (app: Elysia) =>
 
       // Verificar que el usuario existe y obtener su estado de verificación
       const userResult = await client.query(
-        `SELECT id, username, role, "emailVerified", "phoneVerified", "phoneNumber" 
-         FROM public."User" 
+        `SELECT id, username, role, email_verified, phone_verified, phone_number 
+         FROM public."user" 
          WHERE username = $1`,
         [decoded.username]
       )
@@ -53,9 +54,9 @@ export const auth = (app: Elysia) =>
           userId: user.id,
           username: user.username,
           role: user.role,
-          emailVerified: user.emailVerified,
-          phoneVerified: user.phoneVerified,
-          phoneNumber: user.phoneNumber
+          emailVerified: user.email_verified,
+          phoneVerified: user.phone_verified,
+          phoneNumber: user.phone_number
         } as UserContext
       }
     } catch {

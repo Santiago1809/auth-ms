@@ -7,5 +7,6 @@ export const {
   JWT_SECRET = '',
   WHATSAPP_TOKEN = '',
   WHATSAPP_PHONE_NUMBER_ID = '',
-  API_GATEWAY_URL = ''
+  API_GATEWAY_URL = '',
+  FRONTEND_URL = 'http://localhost:3000'
 } = Bun.env

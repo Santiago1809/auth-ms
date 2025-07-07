@@ -6,14 +6,13 @@ import {
   resetPasswordMagicLinkTemplate,
   RESET_PASSWORD_JWT_EXPIRY
 } from '@/lib/constants'
-import { JWT_SECRET } from '@/lib/envars'
+import { FRONTEND_URL, JWT_SECRET } from '@/lib/envars'
 import { Elysia, t } from 'elysia'
 import { OTPService } from '@/services/otp.service'
 import { WhatsAppService } from '@/services/whatsapp.service'
 import { transporter, sendEmail } from '@/services/mail.service'
 import jwt from 'jsonwebtoken'
 
-// Función para verificar si el usuario está completamente verificado y enviar correo de bienvenida
 async function checkFullVerificationAndSendWelcome(
   identifier: string,
   type: 'email' | 'phone'
@@ -22,15 +21,15 @@ async function checkFullVerificationAndSendWelcome(
     // Obtener información actualizada del usuario
     const user = await client
       .query(
-        `SELECT id, username, email, "phoneNumber", "emailVerified", "phoneVerified" 
-         FROM public."User" 
-         WHERE ${type === 'email' ? 'email = $1' : '"phoneNumber" = $1'}`,
+        `SELECT id, username, email, phone_number, email_verified, phone_verified 
+         FROM public."user"
+         WHERE ${type === 'email' ? 'email = $1' : 'phone_number = $1'}`,
         [identifier]
       )
       .then((result) => result.rows[0])
 
     // Si ambos están verificados, enviar correo de bienvenida
-    if (user && user.emailVerified && user.phoneVerified) {
+    if (user && user.email_verified && user.phone_verified) {
       try {
         await sendEmail({
           to: user.email,
@@ -81,7 +80,7 @@ export const verificationRouter = new Elysia({ prefix: 'verification' })
             from: `"Botopia Team" <contacto@botopia.tech>`,
             to: email,
             subject: 'Código de verificación - Botopia',
-            html: verificationCodeTemplate('Usuario', code, 'email')
+            html: verificationCodeTemplate('Usuario', code, 'email', email)
           })
 
           if (!mailSent) {
@@ -120,7 +119,7 @@ export const verificationRouter = new Elysia({ prefix: 'verification' })
   .post(
     '/verify-otp',
     async ({ body, set }) => {
-      const { email, phoneNumber, code, type } = body
+      const { email, phone, code, type } = body
 
       if (!code) {
         set.status = 400
@@ -132,14 +131,14 @@ export const verificationRouter = new Elysia({ prefix: 'verification' })
         return { message: 'Email requerido para verificación por email' }
       }
 
-      if (type === 'phone' && !phoneNumber) {
+      if (type === 'phone' && !phone) {
         set.status = 400
         return {
           message: 'Número de teléfono requerido para verificación por WhatsApp'
         }
       }
       try {
-        const identifier = type === 'email' ? email : phoneNumber
+        const identifier = type === 'email' ? email : phone
         const isValid = await OTPService.verifyOTP(identifier!, code, type)
 
         if (!isValid) {
@@ -150,19 +149,19 @@ export const verificationRouter = new Elysia({ prefix: 'verification' })
         // Actualizar el usuario como verificado
         if (type === 'email') {
           await client.query(
-            'UPDATE public."User" SET "emailVerified" = true WHERE email = $1',
+            'UPDATE public."user" SET email_verified = true WHERE email = $1',
             [email]
           )
         } else {
           await client.query(
-            'UPDATE public."User" SET "phoneVerified" = true WHERE "phoneNumber" = $1',
-            [phoneNumber]
+            'UPDATE public."user" SET phone_verified = true WHERE phone_number = $1',
+            [phone]
           )
         }
 
         // Verificar si el usuario está completamente verificado y enviar correo de bienvenida si es así
         await checkFullVerificationAndSendWelcome(
-          type === 'email' ? email! : phoneNumber!,
+          type === 'email' ? email! : phone!,
           type
         )
 
@@ -179,7 +178,7 @@ export const verificationRouter = new Elysia({ prefix: 'verification' })
     {
       body: t.Object({
         email: t.Optional(t.String({ format: 'email' })),
-        phoneNumber: t.Optional(t.String()),
+        phone: t.Optional(t.String()),
         code: t.String(),
         type: t.Union([t.Literal('email'), t.Literal('phone')])
       })
@@ -188,9 +187,9 @@ export const verificationRouter = new Elysia({ prefix: 'verification' })
   .post(
     '/resend-otp',
     async ({ body, set }) => {
-      const { email, phoneNumber, username } = body
+      const { email, phone, username } = body
 
-      if (!email && !phoneNumber && !username) {
+      if (!email && !phone && !username) {
         set.status = 400
         return { message: 'Se requiere email, número de teléfono o username' }
       }
@@ -202,16 +201,16 @@ export const verificationRouter = new Elysia({ prefix: 'verification' })
 
         if (username) {
           userQuery =
-            'SELECT id, email, "phoneNumber", "countryCode", username FROM public."User" WHERE username = $1'
+            'SELECT id, email, phone_number, country_code, username FROM public."user" WHERE username = $1'
           queryParam = username
         } else if (email) {
           userQuery =
-            'SELECT id, email, "phoneNumber", "countryCode", username FROM public."User" WHERE email = $1'
+            'SELECT id, email, phone_number, country_code, username FROM public."user" WHERE email = $1'
           queryParam = email
-        } else if (phoneNumber) {
+        } else if (phone) {
           userQuery =
-            'SELECT id, email, "phoneNumber", "countryCode", username FROM public."User" WHERE "phoneNumber" = $1'
-          queryParam = phoneNumber
+            'SELECT id, email, phone_number, country_code, username FROM public."user" WHERE phone_number = $1'
+          queryParam = phone
         } else {
           set.status = 400
           return { message: 'Se requiere email, número de teléfono o username' }
@@ -230,10 +229,10 @@ export const verificationRouter = new Elysia({ prefix: 'verification' })
         let smsSent = false
 
         // Si el usuario tiene email y no está verificado, enviamos magic link
-        if (user.email && !user.emailVerified) {
+        if (user.email && !user.email_verified) {
           // Invalidar códigos OTP anteriores
           await client.query(
-            `UPDATE public."OTP" SET verified = true WHERE email = $1 AND verified = false`,
+            `UPDATE public.otp SET verified = true WHERE email = $1 AND verified = false`,
             [user.email]
           ) // Generar magic link para verificación de email
           const emailVerificationToken = await OTPService.createOTP(
@@ -248,7 +247,8 @@ export const verificationRouter = new Elysia({ prefix: 'verification' })
             html: verificationCodeTemplate(
               user.username,
               emailVerificationToken,
-              'magic_link'
+              'magic_link',
+              user.email
             )
           })
 
@@ -256,16 +256,16 @@ export const verificationRouter = new Elysia({ prefix: 'verification' })
         }
 
         // Si el usuario tiene teléfono y no está verificado, enviamos OTP por WhatsApp
-        if (user.phoneNumber && !user.phoneVerified) {
+        if (user.phone_number && !user.phone_verified) {
           // Invalidar códigos OTP anteriores
           await client.query(
-            `UPDATE public."OTP" SET verified = true WHERE "phoneNumber" = $1 AND verified = false`,
-            [user.phoneNumber]
+            `UPDATE public.otp SET verified = true WHERE phone_number = $1 AND verified = false`,
+            [user.phone_number]
           ) // Generar nuevo código
-          const phoneIdentifier = `${(user.countryCode || '').replace(
+          const phoneIdentifier = `${(user.country_code || '').replace(
             '+',
             ''
-          )}${user.phoneNumber}`
+          )}${user.phone_number}`
           const otpCode = await OTPService.createOTP(
             phoneIdentifier,
             'phone',
@@ -300,7 +300,7 @@ export const verificationRouter = new Elysia({ prefix: 'verification' })
     {
       body: t.Object({
         email: t.Optional(t.String({ format: 'email' })),
-        phoneNumber: t.Optional(t.String()),
+        phone: t.Optional(t.String()),
         username: t.Optional(t.String())
       })
     }
@@ -313,9 +313,9 @@ export const verificationRouter = new Elysia({ prefix: 'verification' })
         // Buscar usuario por email, teléfono o username
         const user = await client
           .query(
-            `SELECT id, username, email, "phoneNumber", "emailVerified", "phoneVerified" 
-           FROM public."User" 
-           WHERE username = $1 OR email = $1 OR "phoneNumber" = $1`,
+            `SELECT id, username, email, phone_number, email_verified, phone_verified 
+           FROM public."user" 
+           WHERE username = $1 OR email = $1 OR phone_number = $1`,
             [identifier]
           )
           .then((result) => result.rows[0])
@@ -326,16 +326,16 @@ export const verificationRouter = new Elysia({ prefix: 'verification' })
         }
 
         // Verificamos si el usuario está completamente verificado
-        const isFullyVerified = user.emailVerified && user.phoneVerified
+        const isFullyVerified = user.email_verified && user.phone_verified
 
         return {
           user: {
             username: user.username,
             email: user.email,
-            phoneNumber: user.phoneNumber,
+            phoneNumber: user.phone_number,
             verificationStatus: {
-              email: user.emailVerified,
-              phone: user.phoneVerified
+              email: user.email_verified,
+              phone: user.phone_verified
             },
             isFullyVerified,
             needsVerification: !isFullyVerified
@@ -366,10 +366,10 @@ export const verificationRouter = new Elysia({ prefix: 'verification' })
       try {
         // Buscar el OTP con el token proporcionado
         const otpResult = await client.query(
-          `SELECT o.id, o.email, o."userId" FROM public."OTP" o 
+          `SELECT o.id, o.email, o.user_id FROM public.otp o 
            WHERE o.code = $1 
            AND o.verified = false 
-           AND o."expiresAt" > CURRENT_TIMESTAMP AT TIME ZONE 'UTC'
+           AND o.expires_at > CURRENT_TIMESTAMP AT TIME ZONE 'UTC'
            AND o.email IS NOT NULL`,
           [token]
         )
@@ -383,12 +383,14 @@ export const verificationRouter = new Elysia({ prefix: 'verification' })
 
         // Marcar el OTP como verificado
         await client.query(
-          `UPDATE public."OTP" SET verified = true WHERE id = $1`,
+          `UPDATE public.otp SET verified = true WHERE id = $1`,
           [otp.id]
-        ) // Actualizar el usuario como verificado
+        )
+
+        // Actualizar el usuario como verificado
         await client.query(
-          `UPDATE public."User" SET "emailVerified" = true WHERE id = $1`,
-          [otp.userId]
+          `UPDATE public."user" SET email_verified = true WHERE id = $1`,
+          [otp.user_id]
         )
 
         // Verificar si el usuario está completamente verificado y enviar correo de bienvenida si es así
@@ -396,7 +398,7 @@ export const verificationRouter = new Elysia({ prefix: 'verification' })
 
         // Redirigir al usuario a una página de éxito
 
-        return redirect('https://app.botopia.online', 301)
+        return redirect(`${FRONTEND_URL}`, 301)
       } catch (error) {
         console.error('Error verificando email:', error)
         set.status = 500
@@ -423,7 +425,7 @@ export const verificationRouter = new Elysia({ prefix: 'verification' })
         // Buscar usuario por email
         const user = await client
           .query(
-            `SELECT id, username, email FROM public."User" WHERE email = $1`,
+            `SELECT id, username, email FROM public."user" WHERE email = $1`,
             [email]
           )
           .then((result) => result.rows[0])
@@ -485,7 +487,9 @@ export const verificationRouter = new Elysia({ prefix: 'verification' })
 
         // Buscar información del usuario
         const user = await client
-          .query(`SELECT username FROM public."User" WHERE email = $1`, [email])
+          .query(`SELECT username, email FROM public."user" WHERE email = $1`, [
+            email
+          ])
           .then((result) => result.rows[0])
 
         if (!user) {
@@ -503,7 +507,11 @@ export const verificationRouter = new Elysia({ prefix: 'verification' })
         await sendEmail({
           to: email,
           subject: 'Enlace para restablecer tu contraseña - Botopia',
-          html: resetPasswordMagicLinkTemplate(user.username, resetToken)
+          html: resetPasswordMagicLinkTemplate(
+            user.username,
+            resetToken,
+            user.email
+          )
         })
 
         return {
@@ -526,10 +534,12 @@ export const verificationRouter = new Elysia({ prefix: 'verification' })
       })
     }
   )
-  .post(
+  .patch(
     '/reset-password/change',
     async ({ body, set }) => {
       const { email, newPassword, resetToken } = body
+
+      console.log({ body })
 
       if (!email || !newPassword || !resetToken) {
         set.status = 400
@@ -572,13 +582,13 @@ export const verificationRouter = new Elysia({ prefix: 'verification' })
           algorithm: 'bcrypt'
         }) // Actualizar contraseña del usuario
         await client.query(
-          `UPDATE public."User" SET password = $1 WHERE email = $2`,
+          `UPDATE public."user" SET password = $1 WHERE email = $2`,
           [hashedPassword, email]
         )
 
         // Invalidar todos los OTPs asociados con este email para evitar reuso
         await client.query(
-          `UPDATE public."OTP" SET verified = true WHERE email = $1 AND verified = false`,
+          `UPDATE public.otp SET verified = true WHERE email = $1 AND verified = false`,
           [email]
         )
 
